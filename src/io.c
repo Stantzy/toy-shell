@@ -1,6 +1,6 @@
+#include "../include/io.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "../include/io.h"
 
 static int is_space_char(const char *c)
 {
@@ -111,15 +111,22 @@ int read_string(struct string_item *si)
 	return 0;
 }
 
-static char *read_word(struct word_item *wi, char *w, int max_size)
+static void fill_array_null(char *arr, int len)
 {
-	enum { buff = 128 };
+	int i;
+	for(i = 0; i < len; i++)
+		arr[i] = 0;
+}
+
+static char *read_word(char **ptr_str, char *w, int max_size)
+{
 	char new_word[max_size];
 	int flag_quote = 0;
 	int flag_escape_char = 0;
 	char *tmp1, *tmp2;
 	int counter = 0;
 
+	fill_array_null(new_word, max_size);
 	tmp1 = w;
 	tmp2 = new_word;
  	while(is_to_read_word(tmp1, flag_quote)) {
@@ -148,22 +155,39 @@ static char *read_word(struct word_item *wi, char *w, int max_size)
 	}
 	
 	if(counter != 0) {
-		wi->word = malloc(sizeof(char) * counter + 1);
-		copy_str(new_word, wi->word, counter);
-		(wi->word)[counter] = '\0';
+		*ptr_str = malloc(sizeof(char) * counter);
+		copy_str(new_word, *ptr_str, counter);
+		(*ptr_str)[counter] = '\0';
 	} else {
-		wi->word = NULL;
+		*ptr_str = NULL;
 	}
 
 	return tmp1;
 }
 
-struct word_item *split_string(struct word_item *wi, struct string_item *si)
+static int count_words(char *str)
 {
-	struct word_item *new_wi = NULL, *tmp_wi = NULL;
-	char *tmp;
+	char *tmp = str;
+	int counter = 0;
+
+	while(!is_end_of_string((const char *)tmp)) {
+		if(is_space_char((const char *)tmp))
+			counter++;
+		tmp++;
+	}
+	
+	counter++;
+	return counter;
+}
+
+char **split_string(struct string_item *si)
+{
+	char **ptr_str = NULL, **tmp_str;
+	char *tmp = NULL;
+	int counter;
 
 	tmp = si->str;
+
 	while(tmp <= tmp + si->length - 1) {
 		if(check_empty_word(tmp))
 			tmp = tmp + 2;
@@ -173,50 +197,25 @@ struct word_item *split_string(struct word_item *wi, struct string_item *si)
 			continue;
 		}
 
-		if(new_wi == NULL) {
-			new_wi = malloc(sizeof(struct word_item));
-			tmp_wi = new_wi;
+		if(ptr_str == NULL) {
+			counter = count_words(si->str);
+			ptr_str = malloc(counter * sizeof(char **) + 1);
+			tmp_str = ptr_str;
 		}
 		else {
-			tmp_wi->next = malloc(sizeof(struct word_item));
-			tmp_wi = tmp_wi->next;
+			ptr_str++;
 		}
 
-		tmp = read_word(tmp_wi, tmp, si->max_size);
-		if(tmp_wi->word == NULL)
+		tmp = read_word(ptr_str, tmp, si->max_size);
+		if(*ptr_str == NULL)
 			break;
 	}
-	
-	tmp_wi->next = NULL;
 
-	return new_wi;
-}
-
-void output_words(struct word_item *wi)
-{
-    struct word_item *tmp;
-    
-    tmp = wi;
-	while(tmp->word != NULL) {
-		printf("[%s]", tmp->word);
-		tmp = tmp->next;
-	}
+	return tmp_str;
 }
 
 void release_string_item(struct string_item *si)
 {
 	free(si->str);
 	free(si);
-}
-
-void release_word_item(struct word_item *wi)
-{
-	struct word_item *tmp = wi;
-	
-	while(tmp) {
-		wi = tmp->next;
-		free(tmp->word);
-		free(tmp);
-		tmp = wi;
-	}
 }

@@ -1,11 +1,13 @@
+#include "../include/run.h"
+#include "../include/io.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "../include/io.h"
 
 int main()
 {
+	char **args;
 	struct string_item *si;
-	struct word_item *wi;
 	int result_flag = 0;
 
  	si = malloc(sizeof(struct string_item));
@@ -32,11 +34,11 @@ int main()
 			continue;
 		}
 		
-		wi = split_string(wi, si);
-		output_words(wi);
-		release_word_item(wi);
+		args = split_string(si);
 
-		putchar('\n');
+		run_program(*args, args);
+
+		free(args);
 	}
 
 	release_string_item(si);
