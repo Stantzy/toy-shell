@@ -1,47 +1,27 @@
-#include "../include/run.h"
-#include "../include/io.h"
+#include "../include/tokens.h"
+#include "../include/input_reader.h"
+#include "../include/tokenizer.h"
+#include "../include/executor.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 int main()
 {
-	char **args;
-	struct string_item *si;
-	int result_flag = 0;
+	char *str_ptr;
+	struct token_item *cmd, *tmp;
 
- 	si = malloc(sizeof(struct string_item));
-	si->str = malloc(sizeof(char) * start_buffer);
-	si->max_size = start_buffer;
-	
-	while(result_flag == 0) {
-		printf("> ");
-		result_flag = read_string(si);
-		
-		if(result_flag == 1) {
-			putchar('\n');
-			break;
-		}
+	while((str_ptr = get_input()) != NULL) {
+		cmd = tokenize_string(str_ptr);
+		tmp = cmd;
 
-		if(si->length == 0)
-			continue;
+        if(cmd != NULL) 
+            exec_prog(cmd);
 
-		if(check_only_space_chars(si->str))
-			continue;
-
-		if(check_quotes(si->str)) {
-			printf("Error: unmatched quotes\n");
-			continue;
-		}
-		
-		args = split_string(si);
-
-		run_program(*args, args);
-
-		free(args);
+        kill_zombies();
+        release_memory(tmp);
+		free(str_ptr);
 	}
-
-	release_string_item(si);
 
 	return 0;
 }
