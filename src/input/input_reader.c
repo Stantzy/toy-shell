@@ -1,8 +1,9 @@
-#include "../include/input_reader.h"
+#include "input_reader.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
-void welcome()
+static void welcome()
 {
 	printf("> ");
 }

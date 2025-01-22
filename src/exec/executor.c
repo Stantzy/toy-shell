@@ -1,5 +1,8 @@
-#include "../include/tokens.h"
-#include "../include/executor.h"
+#include "../shared_include/tokens.h"
+#include "exec_structs.h"
+#include "exec_options.h"
+#include "handlers.h"
+#include "executor.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,75 +24,12 @@ static int count_items(struct token_item *first)
     return counter;
 }
 
-static int count_cmd_args(char **cmdl)
-{
-    int counter = 0;
-    
-    while(*cmdl != NULL) {
-        counter++;
-        cmdl++;
-    }
-
-    return counter;
-}
-
 static int check_cd_case(struct token_item *first)
 {
     if(first == NULL)
         return 0;
 
     return (strcmp(first->word, "cd") == 0) ? 1 : 0;
-}
-
-static int handle_cd_case(char **cmdl)
-{
-    int result;
-    char *home;
-
-    if(count_cmd_args(cmdl) > 2) {
-        fprintf(stderr, "ERROR: try \"cd [PATH]\"\n");
-        return -1;
-    }
-
-    if(*(cmdl + 1) == NULL) {
-        home = getenv("HOME");
-        if(home == NULL) {
-            fprintf(stderr, "I don't know where's your home\n");
-            return -1;
-        }
-        result = chdir(home);
-    } else {
-        result = chdir(*(cmdl + 1));
-    }
-
-    if(result == -1) 
-        perror("chdir");
-    
-    return result;
-}
-
-static int handle_wait_result(int wr, int status)
-{
-    if(wr == -1) {
-        perror("wait");
-        return -1;
-    } else {
-        if(WIFEXITED(status)) {
-            return 0;
-        } else {
-            return WTERMSIG(status);
-        }
-    }
-}
-
-static int is_background_process(struct token_item *first)
-{
-    while(first != NULL) {
-        if(strcmp(first->word, "&") == 0 && first->type == separator)
-            return 1;
-        first = first->next;
-    }
-    return 0;
 }
 
 static char **make_cmd_line(struct token_item *first)
@@ -102,6 +42,11 @@ static char **make_cmd_line(struct token_item *first)
     tmp = cmd_line;
 
     while(first != NULL) {
+        if(first->type == separator && strcmp(first->word, ">") == 0)
+            break;
+        if(first->type == separator && strcmp(first->word, ">>") == 0)
+            break;
+            
         if(first->type == regular_token) {
             *tmp = first->word;
             tmp++;
@@ -128,8 +73,9 @@ void kill_zombies()
 
 int exec_prog(struct token_item *first)
 {
-    int wr, status, pid;
-    int result = 0;
+    int pid, result = 0, rdir_res = 0;
+    struct file_descriptors fd_info;
+    struct exec_options opt;
     char **cmd_line;
 
     if(first == NULL) {
@@ -141,8 +87,22 @@ int exec_prog(struct token_item *first)
 
     if(check_cd_case(first)) {
         result = handle_cd_case(cmd_line);
-        free(cmd_line);
-        return result;
+        goto ret;
+    }
+
+    init_options(&opt);
+    update_options(first, &opt);
+    rdir_res = handle_redirection(opt, &fd_info);
+
+    if(rdir_res == -1) {
+        fprintf(stderr, "Error: the output file was expected\n");
+        result = 2;
+        goto ret;
+    }
+    if(rdir_res == -2) {
+        fprintf(stderr, "Error: the input file was expected\n");
+        result = 3;
+        goto ret;
     }
 
     kill_zombies();
@@ -155,15 +115,12 @@ int exec_prog(struct token_item *first)
     }
     
     /* parent process */
-    if(!is_background_process(first)) {
-        do {
-            wr = wait(&status);
-        } while(wr != pid);
-        result = handle_wait_result(wr, status);
-    } else {
-        printf("New background process with pid=%d created\n", pid);
-    }
+    dup2(fd_info.save_stdout, 1);
+    dup2(fd_info.save_stdin, 0);
 
+    result = handle_executed_process(opt, pid);
+
+ret:
 	free(cmd_line);
     return result;
 }
