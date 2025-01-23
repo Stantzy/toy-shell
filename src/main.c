@@ -15,7 +15,7 @@ int main()
 		cmd = tokenize_string(str_ptr);
 		tmp = cmd;
 
-        if(cmd != NULL) 
+		if(cmd != NULL) 
             exec_prog(cmd);
 
 		release_memory(tmp);
