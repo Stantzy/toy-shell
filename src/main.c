@@ -18,7 +18,6 @@ int main()
         if(cmd != NULL) 
             exec_prog(cmd);
 
-        kill_zombies();
         release_memory(tmp);
 		free(str_ptr);
 	}

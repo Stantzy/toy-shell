@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <signal.h>
 
 static int count_items(struct token_item *first)
 {
@@ -59,18 +60,6 @@ static char **make_cmd_line(struct token_item *first)
     return cmd_line;
 }
 
-void kill_zombies()
-{
-    int wr = 0, status;
-    do
-    {
-        wr = wait4(-1, &status, WNOHANG, 0);
-        if(wr != 0 && wr != -1) {
-            printf("Background process with pid=%d finished.\n", wr);
-        }
-    } while (wr != 0 && wr != -1);
-}
-
 int exec_prog(struct token_item *first)
 {
     int pid, result = 0, rdir_res = 0;
@@ -105,7 +94,7 @@ int exec_prog(struct token_item *first)
         goto ret;
     }
 
-    kill_zombies();
+    signal(SIGCHLD, sigchld_handler);
     pid = fork();
     if(pid == 0) {
         /* child process */

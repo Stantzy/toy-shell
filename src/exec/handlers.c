@@ -11,6 +11,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <signal.h>
+
+enum { int_buff = 11 };
 
 static int count_cmd_args(char **cmdl)
 {
@@ -79,9 +82,13 @@ int handle_executed_process(struct exec_options opt, int pid)
     if(opt.background) {
         printf("New background process with pid=%d created\n", pid);
     } else {
+        //signal(SIGCHLD, SIG_DFL);
+        
         do {
             wr = wait(&status);
         } while(wr != pid);
+        
+        signal(SIGCHLD, sigchld_handler);
         result = handle_wait_result(wr, status);
     }
 
@@ -123,4 +130,43 @@ int handle_redirection
     }
 
     return 0;
+}
+
+static void itostr(int x, char *dest)
+{
+    char *tmp;
+
+    for(tmp = dest; tmp != dest + int_buff; tmp++)
+        *tmp = '0';
+    
+    tmp = dest + int_buff;
+    *tmp = '\0';
+    tmp--;
+
+    do {
+        *tmp = x % 10 + '0';    /* + '0' for convert to ASCII */
+        tmp--;
+        x /= 10;
+    } while(x != 0);
+}
+
+void sigchld_handler(int s)
+{
+    int wr = 0, status;
+    char msg_start[] = "\nThe background process with pid = ";
+    char msg_int[int_buff];
+    char msg_end[] = "  is completed.\n";
+
+    signal(SIGCHLD, sigchld_handler);
+    do
+    {
+        wr = wait4(-1, &status, WNOHANG, 0);
+        if(wr != 0 && wr != -1) {
+            itostr(wr, msg_int);
+            write(1, msg_start, sizeof(msg_start));
+            write(1, msg_int, int_buff);
+            write(1, msg_end, sizeof(msg_end));
+            write(1, "> ", 2);
+        }
+    } while (wr != 0 && wr != -1);
 }
