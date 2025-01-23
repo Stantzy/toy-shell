@@ -16,7 +16,7 @@ int main()
 		tmp = cmd;
 
 		if(cmd != NULL) 
-            exec_prog(cmd);
+			exec_prog(cmd);
 
 		release_memory(tmp);
 		free(str_ptr);
