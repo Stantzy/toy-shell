@@ -82,7 +82,7 @@ int handle_executed_process(struct exec_options opt, int pid)
     if(opt.background) {
         printf("New background process with pid=%d created\n", pid);
     } else {
-        //signal(SIGCHLD, SIG_DFL);
+        signal(SIGCHLD, SIG_DFL);
         
         do {
             wr = wait(&status);
