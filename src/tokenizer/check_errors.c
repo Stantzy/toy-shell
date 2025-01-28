@@ -1,8 +1,7 @@
-#include "../shared_include/tokens.h"
-#include "check_errors.h"
+#include "../../include/tokens.h"
+#include "../../include/tokenizer/check_errors.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 int check_quotes(const char *str)

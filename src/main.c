@@ -1,7 +1,7 @@
-#include "./shared_include/tokens.h"
-#include "./input/input_reader.h"
-#include "./tokenizer/tokenizer.h"
-#include "./exec/executor.h"
+#include "../include/tokens.h"
+#include "../include/input/input_reader.h"
+#include "../include/tokenizer/tokenizer.h"
+#include "../include/exec/executor.h"
 
 #include <stdio.h>
 #include <stdlib.h>

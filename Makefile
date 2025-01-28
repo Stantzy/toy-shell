@@ -1,31 +1,47 @@
-CC=gcc
-CFLAGS=-c -Wall -g
-input_sources="./src/input/input_reader.c"
-tokenizer_sources="./src/tokenizer/analyze_token.c" "./src/tokenizer/check_errors.c" "./src/tokenizer/tokenizer.c"
-exec_sources="./src/exec/exec_options.c" "./src/exec/executor.c" "./src/exec/handlers.c"
+ifeq ($(origin CC),default)
+	CC = gcc
+endif
 
-all: final
+CFLAGS ?= -Wall -g
+OUT_O_DIR ?= build
+INPUT_SRC = ./src/input/input_reader.c
+TOKENIZER_SRC = ./src/tokenizer/analyze_token.c ./src/tokenizer/check_errors.c ./src/tokenizer/tokenizer.c
+EXEC_SRC = ./src/exec/exec_options.c ./src/exec/executor.c ./src/exec/handlers.c
+ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-final: main.o exec.o input.o tokenizer.o
-	@echo "Compiling complete. Linking and producing the final application..."
-	@$(CC) -Wall -g *.o
+CSRC = ./src/main.c $(INPUT_SRC) $(TOKENIZER_SRC) $(EXEC_SRC)
 
-main.o:
-	@echo "Compiling the main file..."
-	@$(CC) $(CFLAGS) ./src/main.c
+COBJ := $(addprefix $(OUT_O_DIR)/,$(CSRC:.c=.o))
+DEPS := $(COBJ:.o=.d)
 
-exec.o:
-	@echo "Compiling executor files..."
-	@$(CC) $(CFLAGS) $(exec_sources)
+%.o : ./src/%/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-input.o:
-	@echo "Compiling input reader files..."
-	@$(CC) $(CFLAGS) $(input_sources)
+%.d: ./src/%/%.c
+	$(CC) -E $(CFLAGS) $< -MM -MT $(@:.d=.o) > $@
 
-tokenizer.o:
-	@echo "Compiling tokenizer files..."
-	@$(CC) $(CFLAGS) $(tokenizer_sources)
+include $(DEPS)
+
+.PHONY: all clean
+all: $(OUT_O_DIR)/main.x
+
+$(OUT_O_DIR)/main.x: $(COBJ)
+	$(CC) $^ -o $@ $(LDFLAGS)
+
+$(COBJ) : $(OUT_O_DIR)/%.o : %.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(DEPS) : $(OUT_O_DIR)/%.d : %.c
+	@mkdir -p $(@D)
+	$(CC) -E $(CFLAGS) $< -MM -MT $(@:.d=.o) > $@
 
 clean:
 	@echo "Removing everything but the source files"
-	@rm *.o a.out
+	@rm -rf $(COBJ) $(DEPS) $(OUT_O_DIR)/*.x
+
+NODEPS = clean
+
+ifeq (0, $(words $(findstring $(MAKECMDGOALS), $(NODEPS))))
+	include $(DEPS)
+endif

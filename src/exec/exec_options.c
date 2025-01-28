@@ -1,6 +1,6 @@
-#include "../shared_include/tokens.h"
-#include "exec_structs.h"
-#include "exec_options.h"
+#include "../../include/tokens.h"
+#include "../../include/exec/exec_structs.h"
+#include "../../include/exec/exec_options.h"
 
 #include <stdlib.h>
 #include <string.h>

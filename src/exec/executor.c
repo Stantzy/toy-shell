@@ -1,16 +1,13 @@
-#include "../shared_include/tokens.h"
-#include "exec_structs.h"
-#include "exec_options.h"
-#include "handlers.h"
-#include "executor.h"
+#include "../../include/tokens.h"
+#include "../../include/exec/exec_structs.h"
+#include "../../include/exec/exec_options.h"
+#include "../../include/exec/handlers.h"
+#include "../../include/exec/executor.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <errno.h>
 #include <signal.h>
 
 static int count_items(struct token_item *first)

@@ -1,5 +1,5 @@
-#include "../shared_include/tokens.h"
-#include "analyze_token.h"
+#include "../../include/tokens.h"
+#include "../../include/tokenizer/analyze_token.h"
 
 #include <stdio.h>
 #include <stdlib.h>

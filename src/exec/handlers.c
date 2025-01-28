@@ -1,16 +1,11 @@
-#include "../shared_include/tokens.h"
-#include "exec_structs.h"
-#include "executor.h"
-#include "handlers.h"
+#include "../../include/exec/exec_structs.h"
+#include "../../include/exec/handlers.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <signal.h>
 
 enum { int_buff = 11 };

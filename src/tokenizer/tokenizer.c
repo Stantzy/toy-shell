@@ -1,7 +1,7 @@
-#include "../shared_include/tokens.h"
-#include "check_errors.h"
-#include "analyze_token.h"
-#include "tokenizer.h"
+#include "../../include/tokens.h"
+#include "../../include/tokenizer/check_errors.h"
+#include "../../include/tokenizer/analyze_token.h"
+#include "../../include/tokenizer/tokenizer.h"
 
 #include <stdio.h>
 #include <stdlib.h>
