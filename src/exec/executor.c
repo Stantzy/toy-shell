@@ -3,24 +3,13 @@
 #include "../../include/exec/exec_options.h"
 #include "../../include/exec/handlers.h"
 #include "../../include/exec/executor.h"
+#include "../../include/exec/pipeline.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-
-static int count_items(struct token_item *first)
-{
-    int counter = 0;
-
-    while(first != NULL) {
-        counter++;
-        first = first->next;
-    }
-
-    return counter;
-}
 
 static int check_cd_case(struct token_item *first)
 {
@@ -30,55 +19,95 @@ static int check_cd_case(struct token_item *first)
     return (strcmp(first->word, "cd") == 0) ? 1 : 0;
 }
 
-static char **make_cmd_line(struct token_item *first)
+static struct cmd_line *init_cmdl()
 {
-    char **cmd_line = NULL, **tmp;
-    int counter;
+    struct cmd_line *item = NULL;
 
-    counter = count_items(first);
-    cmd_line = malloc((sizeof(char **) * counter) + 1);
-    tmp = cmd_line;
+    item = malloc(sizeof(struct cmd_line));
+    item->cmdl = (char**)malloc(sizeof(char *) * cmd_size);
+    item->pid = 0;
+    item->fd_in = 0;
+    item->fd_out = 1;
+    item->next = NULL;
+    
+    return item;
+}
+
+static void free_cmdl(struct cmd_line *cl)
+{
+	struct cmd_line *tmp;
+
+	while(cl != NULL) {
+		tmp = cl->next;
+        free(cl->cmdl);
+		free(cl);
+		cl = tmp;
+	}
+}
+
+struct cmd_line *make_cmd_line(struct token_item *first)
+{
+    struct cmd_line *cl, *tmp;
+    int offset = 0;
+
+    cl = init_cmdl();
+    tmp = cl;
 
     while(first != NULL) {
+        if(first->type == separator && strcmp(first->word, "|") == 0) {
+            *(tmp->cmdl + offset) = NULL;
+            tmp->next = init_cmdl();
+            tmp = tmp->next;
+            offset = 0;
+            first = first->next;
+            continue;
+        }
+
         if(first->type == separator && strcmp(first->word, ">") == 0)
             break;
         if(first->type == separator && strcmp(first->word, ">>") == 0)
             break;
             
         if(first->type == regular_token) {
-            *tmp = first->word;
-            tmp++;
+            *(tmp->cmdl + offset) = first->word;
+            offset++;
         }
+
         first = first->next;
     }
 
-    *tmp = NULL;
+    tmp->next = NULL;
 
-    return cmd_line;
+    return cl;
 }
 
 int exec_prog(struct token_item *first)
 {
-    int pid, result = 0, rdir_res = 0;
-    struct file_descriptors fd_info;
+    int pid;
+    int result = 0, rdir_res = 0;
+    int (*ptr_pipe)[2] = NULL;
     struct exec_options opt;
-    char **cmd_line;
+    struct cmd_line *cl, *tmp;
 
-    if(first == NULL) {
-        result = 1;
-        return result;
-    }
+    if(first == NULL)
+        return 1;
 
-    cmd_line = make_cmd_line(first);
+    init_options(&opt);
+    if(update_options(first, &opt) == -1)
+        return 2;
 
-    if(check_cd_case(first)) {
-        result = handle_cd_case(cmd_line);
+    cl = make_cmd_line(first);   /* need to free */
+    ptr_pipe = create_pipes(opt);   /* need to free */
+
+    if(check_cd_case(first) && opt.count_pipelines == 0) {
+        result = handle_cd_case(cl->cmdl);
         goto ret;
     }
 
-    init_options(&opt);
-    update_options(first, &opt);
-    rdir_res = handle_redirection(opt, &fd_info);
+    rdir_res = handle_redirection(&opt);
+
+    if(opt.count_pipelines > 0)
+        make_pipelines(cl, opt, ptr_pipe);
 
     if(rdir_res == -1) {
         fprintf(stderr, "Error: the output file was expected\n");
@@ -91,22 +120,35 @@ int exec_prog(struct token_item *first)
         goto ret;
     }
 
-    signal(SIGCHLD, sigchld_handler);
-    pid = fork();
-    if(pid == 0) {
-        /* child process */
-        execvp(*cmd_line, cmd_line);
-        perror(*cmd_line);
-        exit(1);
+    tmp = cl;
+    while(tmp != NULL) {
+        signal(SIGCHLD, sigchld_handler);
+        pid = fork();
+        tmp->pid = pid;
+        if(pid == 0) {
+            /* child */
+            process_pipelines(ptr_pipe, *tmp, opt);
+            execvp(*(tmp->cmdl), tmp->cmdl);
+            perror(*(tmp->cmdl));
+            exit(1);
+        }
+        /* parent */
+        tmp = tmp->next;
     }
-    
-    /* parent process */
-    dup2(fd_info.save_stdout, 1);
-    dup2(fd_info.save_stdin, 0);
 
-    result = handle_executed_process(opt, pid);
+    /* parent */
+    for(int i = 0; i < opt.count_pipelines; i++) {
+        close(ptr_pipe[i][0]);
+        close(ptr_pipe[i][1]);
+    }
+
+    dup2(opt.save_stdin, 0);
+    dup2(opt.save_stdout, 1);
+
+    result = handle_executed_process(opt, tmp);
 
 ret:
-	free(cmd_line);
+	free_cmdl(cl);
+    free(ptr_pipe);
     return result;
 }

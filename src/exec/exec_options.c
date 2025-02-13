@@ -2,28 +2,33 @@
 #include "../../include/exec/exec_structs.h"
 #include "../../include/exec/exec_options.h"
 
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 void init_options(struct exec_options *o)
 {
     o->background = 0;
-    o->redirection_in = 0;
-    o->redirection_out = 0;
-    o->redirection_out_rewrite = 0;
+    o->count_pipelines = 0;
+    o->rdir_in_flag = 0;
+    o->rdir_out_flag = 0;
+    o->rdir_append_flag = 0;
+    o->save_stdin = 0;
+    o->save_stdout = 1;
+    o->cur_fdin = 0;
+    o->cur_fdout = 1;
     o->in_path = NULL;
     o->out_path = NULL;
 }
 
-static int is_out_path(struct exec_options o, int token_type)
+static int is_out_path(int flag, int token_type)
 {
     return token_type == regular_token &&
-            (o.redirection_out == 1 || o.redirection_out_rewrite == 1);
+        (flag == 1 || flag == 1);
 }
 
-static int is_in_path(struct exec_options o, int token_type)
+static int is_in_path(int flag, int token_type)
 {
-    return token_type == regular_token && o.redirection_in == 1;
+    return token_type == regular_token && flag == 1;
 }
 
 static int is_redirection_separator(struct token_item *token)
@@ -35,7 +40,7 @@ static int is_redirection_separator(struct token_item *token)
 
 int update_options(struct token_item *first, struct exec_options *o)
 {
-    int rdir_out_flag = 0;
+    int rdir_out_flag = 0, rdir_in_flag = 0;
 
     while(first != NULL) {
         if(rdir_out_flag && is_redirection_separator(first)) {
@@ -43,26 +48,39 @@ int update_options(struct token_item *first, struct exec_options *o)
             return 1;
         }
 
+        if((rdir_out_flag == 1 || rdir_in_flag == 1) &&
+        first->type == separator) {
+            fprintf(stderr, "Specify the file name to redirect\n");
+            return -1;
+            }
+
+        if(strcmp(first->word, "|") == 0 && first->type == separator) {
+            (o->count_pipelines)++;
+        } else
         if(strcmp(first->word, "&") == 0 && first->type == separator) {
             o->background = 1;
         } else
         if(strcmp(first->word, ">") == 0 && first->type == separator) {
-            o->redirection_out_rewrite = 1;
+            o->rdir_out_flag = 1;
             rdir_out_flag = 1;
         } else 
         if(strcmp(first->word, ">>") == 0 && first->type == separator) {
-            o->redirection_out = 1;
+            o->rdir_append_flag = 1;
             rdir_out_flag = 1;
         } else
         if(strcmp(first->word, "<") == 0 && first->type == separator) {
-            o->redirection_in = 1;
+            o->rdir_in_flag = 1;
+            rdir_in_flag = 1;
         }
 
-        if(is_out_path(*o, first->type))
+        if(is_out_path(rdir_out_flag, first->type)) {
             o->out_path = first->word;
-        else
-        if(is_in_path(*o, first->type))
+            rdir_out_flag = 0;
+        } else 
+        if(is_in_path(rdir_in_flag, first->type)) {
             o->in_path = first->word;
+            rdir_in_flag = 0;
+        }
 
         first = first->next;
     }

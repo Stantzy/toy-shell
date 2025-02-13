@@ -26,6 +26,15 @@ int check_quotes(const char *str)
 	return counter % 2;
 }
 
+int check_only_whitespaces(const char *str)
+{
+    for(; str != NULL && *str != '\0'; str++) {
+        if(*str != ' ' && *str != '\t')
+            return 0;
+    }
+    return 1;
+}
+
 int check_separators(struct token_item *first)
 {
     int rdir_out_flag = 0;

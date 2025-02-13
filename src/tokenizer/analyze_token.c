@@ -22,10 +22,10 @@ char *handle_separator(const char *str, int *offset)
         case '>':
             flag_double = is_separator_double(str);
             break;
-        case '&':
+        case '&':   
         case '<':
-            break;
         case '|':
+            break;
         case ';':
         case '(':
         case ')':
@@ -59,7 +59,7 @@ static int is_end_of_word(char c)
 int is_separator(char c)
 {
     return c == '&' || c == '>' || c == '<' ||
-            c == ';' || c == '(' || c == ')' || c == '|';
+        c == ';' || c == '(' || c == ')' || c == '|';
 }
 
 static void handle_flag(int *flag, const char **str_ptr, int *off)

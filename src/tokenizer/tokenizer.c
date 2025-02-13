@@ -67,10 +67,10 @@ struct token_item *tokenize_string(const char *str)
 
 	while(*str != '\0') {
         if(token_type == separator && token != NULL &&
-        strcmp(token, "&") == 0 && *str != ' ' && *str != '\t') {
+        strcmp(token, "&") == 0 && !check_only_whitespaces(str)) {
             fprintf(
                 stderr,
-                "Error: non-whitespace characters found after '&'\n"
+                "Error: '&' should be at the end of the string\n"
                 );
             release_memory(first);
             return NULL;
@@ -108,4 +108,3 @@ struct token_item *tokenize_string(const char *str)
 
 	return first;
 }
-

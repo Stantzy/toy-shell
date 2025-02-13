@@ -6,7 +6,7 @@ CFLAGS ?= -Wall -g
 OUT_O_DIR ?= build
 INPUT_SRC = ./src/input/input_reader.c
 TOKENIZER_SRC = ./src/tokenizer/analyze_token.c ./src/tokenizer/check_errors.c ./src/tokenizer/tokenizer.c
-EXEC_SRC = ./src/exec/exec_options.c ./src/exec/executor.c ./src/exec/handlers.c
+EXEC_SRC = ./src/exec/exec_options.c ./src/exec/executor.c ./src/exec/handlers.c ./src/exec/pipeline.c
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 CSRC = ./src/main.c $(INPUT_SRC) $(TOKENIZER_SRC) $(EXEC_SRC)

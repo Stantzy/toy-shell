@@ -2,19 +2,18 @@
 #define EXEC_STRUCTS_SENTRY_H
 
 struct exec_options {
-    int background;
-    int redirection_in;
-    int redirection_out;
-    int redirection_out_rewrite;
-    char *in_path;
-    char *out_path;
+    int background, count_pipelines;
+    int rdir_in_flag, rdir_out_flag, rdir_append_flag;
+    int save_stdin, save_stdout;
+    int cur_fdin, cur_fdout;
+    char *in_path, *out_path;
 };
 
-struct file_descriptors {
-    int fd_out;
-    int fd_in;
-    int save_stdout;
-    int save_stdin;
+struct cmd_line {
+    char **cmdl;
+    int pid;
+    int fd_in, fd_out;
+    struct cmd_line *next;
 };
 
 #endif

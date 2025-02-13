@@ -51,10 +51,12 @@ int handle_cd_case(char **cmdl)
 
 static int no_redirections(struct exec_options opt)
 {
-    return opt.redirection_out == 0 && opt.redirection_out_rewrite == 0 &&
-            opt.redirection_in == 0;
+    return opt.rdir_out_flag == 0 &&
+        opt.rdir_append_flag == 0 &&
+        opt.rdir_in_flag == 0;
 }
 
+#ifdef DEBUG
 static int handle_wait_result(int wr, int status)
 {
     if(wr == -1) {
@@ -68,60 +70,68 @@ static int handle_wait_result(int wr, int status)
         }
     }
 }
+#endif
 
-int handle_executed_process(struct exec_options opt, int pid)
+int handle_executed_process(struct exec_options opt, struct cmd_line *cl)
 {
     int wr, status;
     int result = 0;
 
     if(opt.background) {
-        printf("New background process with pid=%d created\n", pid);
+        while(cl != NULL) {
+            printf("New background process with pid=%d created\n", cl->pid);
+            cl = cl->next;
+        }
     } else {
-        signal(SIGCHLD, SIG_DFL);
+        while((wr = wait4(-1, &status, 0, NULL)) > 0) {
+#ifdef DEBUG            
+            if(wr > 0) {
+                printf("Process with pid=%d completed ", wr);
+                result = handle_wait_result(wr, status);
+                printf("with result=%d\n", result);
+            }
+#endif            
+        }
+
         
-        do {
-            wr = wait(&status);
-        } while(wr != pid);
-        
-        signal(SIGCHLD, sigchld_handler);
-        result = handle_wait_result(wr, status);
     }
 
     return result;
 }
 
-int handle_redirection
-(struct exec_options opt, struct file_descriptors *fd_info)
+int handle_redirection(struct exec_options *opt)
 {
     int out_flags = 0;
 
-    if(no_redirections(opt))
+    opt->save_stdin = dup(STDIN_FILENO);    
+    opt->save_stdout = dup(STDOUT_FILENO);
+    opt->cur_fdin = opt->save_stdin;
+    opt->cur_fdout = opt->save_stdout;
+
+    if(no_redirections(*opt))
         return 0;
 
-    if(opt.redirection_in) {
-        fd_info->fd_in = open(opt.in_path, O_RDONLY);
-        fd_info->save_stdin = dup(0);
-        dup2(fd_info->fd_in, 0);
-        if(fd_info->fd_in == -1) {
+    if(opt->rdir_in_flag) {
+        opt->cur_fdin = open(opt->in_path, O_RDONLY);
+        if(opt->cur_fdin == -1) {
             perror("Error opening the input file");
             return -1;
         }
+        dup2(opt->cur_fdin, 0);
     }
-
-    if(opt.redirection_out)
+    if(opt->rdir_out_flag)
         out_flags = O_CREAT | O_RDWR | O_APPEND;
     else
-    if(opt.redirection_out_rewrite)
+    if(opt->rdir_append_flag)
         out_flags = O_CREAT | O_RDWR | O_TRUNC;
 
-    if(opt.redirection_out || opt.redirection_out_rewrite) {
-        fd_info->fd_out = open(opt.out_path, out_flags, 0666);
-        if(fd_info->fd_out == -1) {
+    if(opt->rdir_out_flag || opt->rdir_append_flag) {
+        opt->cur_fdout = open(opt->out_path, out_flags, 0666);
+        if(opt->cur_fdout == -1) {
             perror("Error opening the output file");
             return -2;
         }
-        fd_info->save_stdout = dup(1);
-        dup2(fd_info->fd_out, 1);
+        dup2(opt->cur_fdout, 1);
     }
 
     return 0;
@@ -139,7 +149,7 @@ static void itostr(int x, char *dest)
     tmp--;
 
     do {
-        *tmp = x % 10 + '0';    /* + '0' for convert to ASCII */
+        *tmp = x % 10 + '0';    /* + '0' for conversion to ASCII */
         tmp--;
         x /= 10;
     } while(x != 0);

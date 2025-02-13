@@ -2,6 +2,7 @@
 #define CHECK_ERRORS_H
 
 int check_quotes(const char *str);
+int check_only_whitespaces(const char *str);
 int check_separators(struct token_item *first);
 
 #endif
