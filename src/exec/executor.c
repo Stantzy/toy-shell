@@ -1,15 +1,15 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <signal.h>
+
 #include "../../include/tokens.h"
 #include "../../include/exec/exec_structs.h"
 #include "../../include/exec/exec_options.h"
 #include "../../include/exec/handlers.h"
 #include "../../include/exec/executor.h"
 #include "../../include/exec/pipeline.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <signal.h>
 
 static int check_cd_case(struct token_item *first)
 {
@@ -121,6 +121,7 @@ int exec_prog(struct token_item *first)
     }
 
     tmp = cl;
+    sigchld_background_flag = opt.background;   /* global variable for SIGCHLD */
     while(tmp != NULL) {
         signal(SIGCHLD, sigchld_handler);
         pid = fork();

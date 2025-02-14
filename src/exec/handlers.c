@@ -1,6 +1,3 @@
-#include "../../include/exec/exec_structs.h"
-#include "../../include/exec/handlers.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,7 +5,12 @@
 #include <fcntl.h>
 #include <signal.h>
 
+#include "../../include/exec/exec_structs.h"
+#include "../../include/exec/handlers.h"
+
 enum { int_buff = 11 };
+
+volatile sig_atomic_t sigchld_background_flag = 0;
 
 static int count_cmd_args(char **cmdl)
 {
@@ -79,12 +81,12 @@ int handle_executed_process(struct exec_options opt, struct cmd_line *cl)
 
     if(opt.background) {
         while(cl != NULL) {
-            printf("New background process with pid=%d created\n", cl->pid);
+            printf("New background process with PID=%d created\n", cl->pid);
             cl = cl->next;
         }
     } else {
         while((wr = wait4(-1, &status, 0, NULL)) > 0) {
-#ifdef DEBUG            
+#ifdef DEBUG         
             if(wr > 0) {
                 printf("Process with pid=%d completed ", wr);
                 result = handle_wait_result(wr, status);
@@ -117,7 +119,7 @@ int handle_redirection(struct exec_options *opt)
             perror("Error opening the input file");
             return -1;
         }
-        dup2(opt->cur_fdin, 0);
+        dup2(opt->cur_fdin, STDIN_FILENO);
     }
     if(opt->rdir_out_flag)
         out_flags = O_CREAT | O_RDWR | O_APPEND;
@@ -131,7 +133,7 @@ int handle_redirection(struct exec_options *opt)
             perror("Error opening the output file");
             return -2;
         }
-        dup2(opt->cur_fdout, 1);
+        dup2(opt->cur_fdout, STDOUT_FILENO);
     }
 
     return 0;
@@ -157,21 +159,25 @@ static void itostr(int x, char *dest)
 
 void sigchld_handler(int s)
 {
-    int wr = 0, status;
-    char msg_start[] = "\nThe background process with pid = ";
+    int wr = 0, status, offset = 0;
+    char msg_start[] = "The background process with PID=";
     char msg_int[int_buff];
+    char *p_tmp = msg_int;
     char msg_end[] = "  is completed.\n";
 
     signal(SIGCHLD, sigchld_handler);
     do
     {
         wr = wait4(-1, &status, WNOHANG, 0);
-        if(wr != 0 && wr != -1) {
+        if(sigchld_background_flag == 1 && wr != 0 && wr != -1) {
             itostr(wr, msg_int);
-            write(1, msg_start, sizeof(msg_start));
-            write(1, msg_int, int_buff);
-            write(1, msg_end, sizeof(msg_end));
-            write(1, "> ", 2);
+            while(*p_tmp == '0') {
+                p_tmp++;
+                offset++;
+            }
+            write(STDOUT_FILENO, msg_start, sizeof(msg_start));
+            write(STDOUT_FILENO, p_tmp, int_buff - offset);
+            write(STDOUT_FILENO, msg_end, sizeof(msg_end));
         }
     } while (wr != 0 && wr != -1);
 }
