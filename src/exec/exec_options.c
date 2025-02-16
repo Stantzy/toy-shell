@@ -9,6 +9,7 @@ void init_options(struct exec_options *o)
 {
     o->background = 0;
     o->count_pipelines = 0;
+    o->cmd_pgid = 0;
     o->rdir_in_flag = 0;
     o->rdir_out_flag = 0;
     o->rdir_append_flag = 0;

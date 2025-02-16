@@ -74,28 +74,26 @@ static int handle_wait_result(int wr, int status)
 }
 #endif
 
-int handle_executed_process(struct exec_options opt, struct cmd_line *cl)
+int handle_executed_processes(struct exec_options opt, struct cmd_line *cl)
 {
     int wr, status;
     int result = 0;
 
-    if(opt.background) {
-        while(cl != NULL) {
+    while(cl != NULL) {
+        if(opt.background) {
             printf("New background process with PID=%d created\n", cl->pid);
-            cl = cl->next;
-        }
-    } else {
-        while((wr = wait4(-1, &status, 0, NULL)) > 0) {
+        } else {
+            while((wr = wait4(cl->pid, &status, 0, NULL)) > 0) {
 #ifdef DEBUG         
-            if(wr > 0) {
-                printf("Process with pid=%d completed ", wr);
-                result = handle_wait_result(wr, status);
-                printf("with result=%d\n", result);
+                if(wr > 0) {
+                    printf("DEBUG: Process with pid=%d completed ", wr);
+                    result = handle_wait_result(wr, status);
+                    printf("with result=%d\n", result);
+                }
+#endif
             }
-#endif            
         }
-
-        
+        cl = cl->next;
     }
 
     return result;

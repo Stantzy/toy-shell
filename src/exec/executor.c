@@ -10,6 +10,7 @@
 #include "../../include/exec/handlers.h"
 #include "../../include/exec/executor.h"
 #include "../../include/exec/pipeline.h"
+#include "../../include/exec/grpctrl.h"
 
 static int check_cd_case(struct token_item *first)
 {
@@ -26,6 +27,7 @@ static struct cmd_line *init_cmdl()
     item = malloc(sizeof(struct cmd_line));
     item->cmdl = (char**)malloc(sizeof(char *) * cmd_size);
     item->pid = 0;
+    item->pgid = 0;
     item->fd_in = 0;
     item->fd_out = 1;
     item->next = NULL;
@@ -120,14 +122,30 @@ int exec_prog(struct token_item *first)
         goto ret;
     }
 
+    signal(SIGCHLD, sigchld_handler);
     tmp = cl;
     sigchld_background_flag = opt.background;   /* global variable for SIGCHLD */
     while(tmp != NULL) {
-        signal(SIGCHLD, sigchld_handler);
         pid = fork();
-        tmp->pid = pid;
+        update_cmd_pgid(pid, &opt);
+        if(pid > 0) {
+            /* parent */
+            tmp->pid = pid;
+            tmp->pgid = opt.cmd_pgid;
+            change_fg_proc(opt, *cl);
+            setpgid(pid, opt.cmd_pgid);
+        }
+
         if(pid == 0) {
             /* child */
+#ifdef DEBUG
+            printf("DEBUG: SID=%d, PPID=%d, PGID=%d, PID=%d\n",
+                getsid(0),
+                getppid(),
+                getpgid(0),
+                getpid()
+            );
+#endif
             process_pipelines(ptr_pipe, *tmp, opt);
             execvp(*(tmp->cmdl), tmp->cmdl);
             perror(*(tmp->cmdl));
@@ -146,8 +164,9 @@ int exec_prog(struct token_item *first)
     dup2(opt.save_stdin, 0);
     dup2(opt.save_stdout, 1);
 
-    result = handle_executed_process(opt, tmp);
-
+    handle_executed_processes(opt, cl);
+    opt.cmd_pgid = getpid();
+    change_fg_proc(opt, *cl);
 ret:
 	free_cmdl(cl);
     free(ptr_pipe);
