@@ -22,11 +22,11 @@ char *handle_separator(const char *str, int *offset)
         case '>':
             flag_double = is_separator_double(str);
             break;
-        case '&':   
+        case '&':
         case '<':
         case '|':
-            break;
         case ';':
+            break;
         case '(':
         case ')':
             fprintf(stderr, "Feature '%c' not implemented yet\n", *str);

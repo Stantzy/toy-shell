@@ -21,13 +21,7 @@ void init_options(struct exec_options *o)
     o->out_path = NULL;
 }
 
-static int is_out_path(int flag, int token_type)
-{
-    return token_type == regular_token &&
-        (flag == 1 || flag == 1);
-}
-
-static int is_in_path(int flag, int token_type)
+static int is_path(int flag, int token_type)
 {
     return token_type == regular_token && flag == 1;
 }
@@ -74,11 +68,11 @@ int update_options(struct token_item *first, struct exec_options *o)
             rdir_in_flag = 1;
         }
 
-        if(is_out_path(rdir_out_flag, first->type)) {
+        if(is_path(rdir_out_flag, first->type)) {
             o->out_path = first->word;
             rdir_out_flag = 0;
         } else 
-        if(is_in_path(rdir_in_flag, first->type)) {
+        if(is_path(rdir_in_flag, first->type)) {
             o->in_path = first->word;
             rdir_in_flag = 0;
         }

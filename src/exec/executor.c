@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/wait.h>
 
 #include "../../include/tokens.h"
 #include "../../include/exec/exec_structs.h"
@@ -56,7 +57,8 @@ struct cmd_line *make_cmd_line(struct token_item *first)
     tmp = cl;
 
     while(first != NULL) {
-        if(first->type == separator && strcmp(first->word, "|") == 0) {
+        if((first->type == separator && strcmp(first->word, "|") == 0) ||
+        (first->type == separator && strcmp(first->word, ";") == 0)) {
             *(tmp->cmdl + offset) = NULL;
             tmp->next = init_cmdl();
             tmp = tmp->next;
@@ -133,13 +135,20 @@ int exec_prog(struct token_item *first)
             tmp->pid = pid;
             tmp->pgid = opt.cmd_pgid;
             change_fg_proc(opt, *cl);
-            setpgid(pid, opt.cmd_pgid);
+        
+            if(opt.count_pipelines > 0)
+                setpgid(pid, opt.cmd_pgid);
+            else
+                setpgid(pid, pid);
+
+            dup2(opt.save_stdin, 0);
+            dup2(opt.save_stdout, 1);
         }
 
         if(pid == 0) {
             /* child */
 #ifdef DEBUG
-            printf("DEBUG: SID=%d, PPID=%d, PGID=%d, PID=%d\n",
+            printf("###DEBUG: SID=%d, PPID=%d, PGID=%d, PID=%d\n",
                 getsid(0),
                 getppid(),
                 getpgid(0),
@@ -152,6 +161,8 @@ int exec_prog(struct token_item *first)
             exit(1);
         }
         /* parent */
+        if(opt.count_pipelines == 0 && tmp->next != NULL)   /* if ';' separator */
+            waitpid(pid, NULL, 0);
         tmp = tmp->next;
     }
 
@@ -160,9 +171,6 @@ int exec_prog(struct token_item *first)
         close(ptr_pipe[i][0]);
         close(ptr_pipe[i][1]);
     }
-
-    dup2(opt.save_stdin, 0);
-    dup2(opt.save_stdout, 1);
 
     handle_executed_processes(opt, cl);
     opt.cmd_pgid = getpid();
