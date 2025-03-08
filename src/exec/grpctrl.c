@@ -7,18 +7,18 @@
 
 int change_fg_proc(struct exec_options opt, struct cmd_line cl)
 {
-    int res;
-    
-    if(opt.background == 0 && opt.cmd_pgid != 0) {
-        signal(SIGTTOU, SIG_IGN);
-        res = tcsetpgrp(STDIN_FILENO, opt.cmd_pgid);
-    }
+	int res;
 
-    return res;
+	if(opt.background == 0 && opt.cmd_pgid != 0) {
+		signal(SIGTTOU, SIG_IGN);
+		res = tcsetpgrp(STDIN_FILENO, opt.cmd_pgid);
+	}
+
+	return res;
 }
 
 void update_cmd_pgid(int pid, struct exec_options *opt)
 {
-    if(pid > 0 && opt->cmd_pgid == 0)
-        opt->cmd_pgid = pid;
+	if(pid > 0 && opt->cmd_pgid == 0)
+		opt->cmd_pgid = pid;
 }

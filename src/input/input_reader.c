@@ -20,7 +20,7 @@ static void resize_array(char **arr, int *old_size)
 	char *new_arr;
 	
 	new_arr = malloc(sizeof(char) * (*old_size) * 2);
-    copy_str(*arr, new_arr, *old_size);
+	copy_str(*arr, new_arr, *old_size);
 	free(*arr);
 	*old_size *= 2;
 	*arr = new_arr;

@@ -28,43 +28,54 @@ int check_quotes(const char *str)
 
 int check_only_whitespaces(const char *str)
 {
-    for(; str != NULL && *str != '\0'; str++) {
-        if(*str != ' ' && *str != '\t')
-            return 0;
-    }
-    return 1;
+	for(; str != NULL && *str != '\0'; str++) {
+		if(*str != ' ' && *str != '\t')
+			return 0;
+	}
+
+	return 1;
 }
 
 int check_separators(struct token_item *first)
 {
-    int rdir_out_flag = 0;
-    int rdir_in_flag = 0;
-    int cur_flag = 0;
+	int rdir_out_flag = 0;
+	int rdir_in_flag = 0;
+	int cur_flag = 0;
 
-    while(first != NULL) {
-        cur_flag = 0;
-        if(rdir_in_flag && first->type == separator && *(first->word) == '<')
-            return 1;
-        if(rdir_out_flag && first->type == separator && *(first->word) == '>')
-            return 1;
+	while(first != NULL) {
+		cur_flag = 0;
+		if(
+			rdir_in_flag &&
+			first->type == separator &&
+			*(first->word) == '<'
+		) {
+			return 1;
+		}
+		if(
+			rdir_out_flag &&
+			first->type == separator &&
+			*(first->word) == '>'
+		) {
+			return 1;
+		}
 
-        if(strcmp(first->word, ">") == 0 && first->type == separator) {
-            rdir_out_flag = 1;
-            cur_flag = 1;
-        } else 
-        if(strcmp(first->word, ">>") == 0 && first->type == separator) {
-            rdir_out_flag = 1;
-            cur_flag = 1;
-        } else
-        if(strcmp(first->word, "<") == 0 && first->type == separator) {
-            rdir_in_flag = 1;
-            cur_flag = 1;
-        }
+		if(strcmp(first->word, ">") == 0 && first->type == separator) {
+			rdir_out_flag = 1;
+			cur_flag = 1;
+		} else 
+		if(strcmp(first->word, ">>") == 0 && first->type == separator) {
+			rdir_out_flag = 1;
+			cur_flag = 1;
+		} else
+		if(strcmp(first->word, "<") == 0 && first->type == separator) {
+			rdir_in_flag = 1;
+			cur_flag = 1;
+		}
 
-        first = first->next;
-        if(cur_flag && first != NULL && first->type == separator)
-            return 2;
-    }
+		first = first->next;
+		if(cur_flag && first != NULL && first->type == separator)
+			return 2;
+	}
 
-    return 0;
+	return 0;
 }
